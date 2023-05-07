@@ -5,8 +5,10 @@ import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -35,7 +37,14 @@ import androidx.core.content.ContextCompat;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
     ImageView imageView;
@@ -160,14 +169,19 @@ public class MainActivity extends AppCompatActivity {
                 imageView.setImageURI(uri);
             }
         });
+
+        Timer timer = new Timer();
         final Handler handler = new Handler();
-        Runnable runnable = new Runnable() {
+        final Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                List<ScanResult> scanResult = mWifiManager.getScanResults();
-                PointF cur = getLocationFromScanResult(scanResult);
-                drawPointOnImageView(cur);
-                handler.postDelayed(this, 1000);
+                PointF cur = getLocationFromScanResult();
+                if (cur != null) {
+                    drawPointOnImageView(cur);
+                } else {
+                    Toast.makeText(getApplicationContext(), "There's no matched AP location", Toast.LENGTH_SHORT).show();
+                }
+                handler.postDelayed(this, 5000);
             }
         };
         localization.setOnCheckedChangeListener((compoundButton, b) -> {
@@ -180,9 +194,24 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Localization mode ON", Toast.LENGTH_SHORT).show();
                 mWifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 
-                handler.post(runnable);
+                timer.scheduleAtFixedRate(new TimerTask() {
+                    @Override
+                    public void run() {
+                        boolean scanStarted = mWifiManager.startScan();
+                        if(!scanStarted) Log.e("Error", "Wifi scan failed...");
+                        PointF cur = getLocationFromScanResult();
+                        if (cur != null) {
+                            drawPointOnImageView(cur);
+                        } else {
+                            Log.e("Error", "There's no matched APs.");
+                        }
+                    }
+                }, 0, 5000);
+
+//                handler.post(runnable);
             } else {
-                handler.removeCallbacks(runnable);
+                timer.cancel();
+//                handler.removeCallbacks(runnable);
                 imageView.setImageURI(uri);
                 Toast.makeText(getApplicationContext(), "Localization mode OFF", Toast.LENGTH_SHORT).show();
             }
@@ -210,20 +239,6 @@ public class MainActivity extends AppCompatActivity {
                     drawPointsOnImageView(locationPoints);
                 }
             }
-            /*for (PointF point: locationPoints) {
-                Log.d("Point", String.valueOf(point.x) + ", " + String.valueOf(point.y));
-            }
-            for (List<ScanResult> lsr: scanResults) {
-                String mApStr = "";
-                for (ScanResult result: lsr) {
-                    mApStr = mApStr + result.SSID + "; ";
-                    mApStr = mApStr + result.BSSID + "; ";
-                    mApStr = mApStr + result.capabilities + "; ";
-                    mApStr = mApStr + result.frequency + " MHz;";
-                    mApStr = mApStr + result.level + " dBm";
-                }
-                Log.d("ScanResult", mApStr);
-            }*/
         } else if (requestCode == 3) {
             List<ScanResult> mScanResults = (List<ScanResult>) data.getSerializableExtra("scanResults");
             int idx = data.getIntExtra("Index", -1);
@@ -275,8 +290,44 @@ public class MainActivity extends AppCompatActivity {
         imageView.setImageBitmap(mutableBitmap);
     }
 
-    private PointF getLocationFromScanResult(List<ScanResult> currentScanResults) {
-        List<ScanResult> selectedScanResults = null;
+    private PointF getLocationFromScanResult() {
+        List<ScanResult> currentScanResult = mWifiManager.getScanResults();
+        Collections.sort(currentScanResult, (t1, t2) -> {
+            if (t1.level < t2.level) {
+                return 1;
+            } else {
+                return -1;
+            }
+        });
+        for (int i = 0; i < 3; i++) {
+            Log.d("Current AP", i + " " + currentScanResult.get(i).SSID + " " + currentScanResult.get(i).level);
+        }
+
+        int idx = 0;
+        for (List<ScanResult> lsr : scanResults) {
+            Collections.sort(lsr, (t1, t2) -> {
+                if (t1.level < t2.level) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            });
+            int count = 0;
+            for (int i = 0; i < 3; i++) {
+                if (Math.abs(currentScanResult.get(i).level - lsr.get(i).level) < 1) {
+                    if (Objects.equals(currentScanResult.get(i).BSSID, lsr.get(i).BSSID)) {
+                        count++;
+                    }
+                }
+            }
+            if (count == 3) {
+                PointF p = locationPoints.get(idx);
+                return locationPoints.get(idx);
+            }
+            idx++;
+        }
+        return null;
+        /*List<ScanResult> selectedScanResults = null;
         int maxMatches = 0;
         for (List<ScanResult> savedScanResults : scanResults) {
             int matches = 0;
@@ -293,12 +344,14 @@ public class MainActivity extends AppCompatActivity {
                 selectedScanResults = savedScanResults;
             }
         }
+        Log.d("Match numbers", String.valueOf(maxMatches));
 
         PointF location = null;
         int index = scanResults.indexOf(selectedScanResults);
         if (index != -1) {
             location = locationPoints.get(index);
         }
-        return location;
+
+        return location;*/
     }
 }
