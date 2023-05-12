@@ -15,7 +15,13 @@
             android:id="@+id/uploadMap"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/upload_map" />
+            android:text="upload_map" />
+        <Button
+            android:id="@+id/deleteMap"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="delete map"
+            android:visibility="gone" />
 
         <ToggleButton
             android:id="@+id/warDriving"

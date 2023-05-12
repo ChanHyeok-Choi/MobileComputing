@@ -22,6 +22,7 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -43,6 +44,7 @@ import java.util.TimerTask;
 public class MainActivity extends AppCompatActivity {
     ImageView imageView;
     Button upload_button;
+    Button delete_button;
     ToggleButton warDriving;
     ToggleButton localization;
 
@@ -74,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
 
         imageView = findViewById(R.id.imageView);
         upload_button = findViewById(R.id.uploadMap);
+        delete_button = findViewById(R.id.deleteMap);
         warDriving = findViewById(R.id.warDriving);
         localization = findViewById(R.id.localization);
 
@@ -81,6 +84,11 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(Intent.ACTION_PICK);
             intent.setType("image/*");
             startActivityForResult(intent, 1);
+        });
+
+        delete_button.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            startActivityForResult(intent, 4);
         });
 
         warDriving.setOnCheckedChangeListener((compoundButton, b) -> {
@@ -213,6 +221,8 @@ public class MainActivity extends AppCompatActivity {
                 uri = data.getData();
                 imageView.setImageURI(uri);
                 Log.d("Uri", String.valueOf(uri));
+                upload_button.setVisibility(View.GONE);
+                delete_button.setVisibility(View.VISIBLE);
             }
         } else if (requestCode == 2) {
             if (resultCode == RESULT_OK && data != null) {
@@ -234,6 +244,9 @@ public class MainActivity extends AppCompatActivity {
             scanResults.set(idx, mScanResults);
             drawPointsOnImageView(locationPoints);
         } else {
+            imageView.setImageResource(R.drawable.ic_launcher_foreground);
+            delete_button.setVisibility(View.GONE);
+            upload_button.setVisibility(View.VISIBLE);
         }
     }
 
