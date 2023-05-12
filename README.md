@@ -8,6 +8,9 @@ you can access and see my [report.docx](./Assignment1/Report.docx)
 ## Source Code
 In Android Studio, you can easily access my source code in [app](./Assignment1/app/)
 
+## APK file
+For Android, there's [app-release.apk](./Assignment1/app/release/app-release.apk)
+
 ## Exprimental Video
 There are three MP4 files for three main functions:
 1. [Upload/Delete Map](./Assignment1/UploadDeleteMap.mp4): Upload & Delete a floor map from photo album
